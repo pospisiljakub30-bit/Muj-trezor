@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Trezor</title>
+    <style>
+        :root { --primary: #00ff88; --bg: #0f172a; --card: #1e293b; --text: #f8fafc; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .app-container { width: 90%; max-width: 380px; background: var(--card); padding: 30px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+        h1 { font-size: 1.5rem; margin-bottom: 30px; letter-spacing: -1px; }
+        .amount-display { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 20px 0; }
+        .input-group { margin-bottom: 20px; }
+        input { width: 100%; background: #334155; border: none; padding: 15px; border-radius: 12px; color: white; font-size: 1.2rem; text-align: center; box-sizing: border-box; }
+        button { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; font-size: 1rem; cursor: pointer; transition: all 0.2s; background: var(--primary); color: #000; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #475569; color: #94a3b8; }
+        .lock-icon { font-size: 50px; margin-bottom: 10px; }
+        #countdown { font-size: 1.1rem; color: #94a3b8; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="setup-view">
+        <div class="lock-icon">🔓</div>
+        <h1>Časový Trezor</h1>
+        <div class="input-group">
+            <input type="number" id="moneyInput" placeholder="0.00 Kč" inputmode="decimal">
+        </div>
+        <button onclick="saveLock()">ZAMKNOUT VKLAD</button>
+    </div>
+
+    <div id="lock-view" style="display:none;">
+        <div class="lock-icon">🔒</div>
+        <h1>Peníze jsou v bezpečí</h1>
+        <div class="amount-display" id="displayAmount">0 Kč</div>
+        <div id="countdown">Načítám odpočet...</div>
+        <br>
+        <button id="withdrawBtn" disabled onclick="resetAll()">VYBRAT PENÍZE</button>
+    </div>
+</div>
+
+<script>
+    function saveLock() {
+        const amt = document.getElementById('moneyInput').value;
+        if(!amt || amt <= 0) return alert("Zadej platnou částku");
+        
+        localStorage.setItem('saved_amt', amt);
+        localStorage.setItem('unlock_date', new Date().getTime() + (30 * 24 * 60 * 60 * 1000));
+        updateUI();
+    }
+
+    function updateUI() {
+        const amt = localStorage.getItem('saved_amt');
+        const unlockAt = localStorage.getItem('unlock_date');
+
+        if(amt && unlockAt) {
+            document.getElementById('setup-view').style.display = 'none';
+            document.getElementById('lock-view').style.display = 'block';
+            document.getElementById('displayAmount').innerText = amt + " Kč";
+
+            const check = setInterval(() => {
+                const now = new Date().getTime();
+                const diff = unlockAt - now;
+
+                if(diff <= 0) {
+                    clearInterval(check);
+                    document.getElementById('countdown').innerText = "Trezor je připraven k otevření!";
+                    document.getElementById('withdrawBtn').disabled = false;
+                    document.querySelector('.lock-icon').innerText = "🟢";
+                } else {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    document.getElementById('countdown').innerText = `Odemkne se za: ${days}d ${hours}h`;
+                }
+            }, 1000);
+        }
+    }
+
+    function resetAll() {
+        if(confirm("Opravdu vybrat?")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    updateUI();
+</script>
+
+</body>
+</html>
